@@ -198,19 +198,19 @@ Use these credentials at http://localhost:3000/login (frontend) or via `POST /ap
 
 All four services running in Docker Desktop:
 
-![Docker Containers](docs/screenshots/docker-containers.png)
+![Docker Containers](docs/screenshots/docker.png)
 
 ### Admin Dashboard
 
 The admin panel with full CRUD, search, and pagination:
 
-![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+![Admin Dashboard](docs/screenshots/admin.png)
 
 ### Email Notification (MailHog)
 
 HTML email captured by MailHog showing changed fields with old/new values:
 
-![Email Notification](docs/screenshots/mailhog-email.png)
+![Email Notification](docs/screenshots/email.png)
 
 ## Verification Checklist (for reviewers)
 
