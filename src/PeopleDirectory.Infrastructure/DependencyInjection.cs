@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PeopleDirectory.Application.Interfaces;
+using PeopleDirectory.Application.Services;
 using PeopleDirectory.Domain.Interfaces;
 using PeopleDirectory.Infrastructure.Data;
 using PeopleDirectory.Infrastructure.Repositories;
@@ -36,12 +37,18 @@ public static class DependencyInjection
         services.AddScoped<ICountryRepository, CountryRepository>();
         services.AddScoped<ICityRepository, CityRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IOutboxRepository, OutboxRepository>();
 
-        // Services
+        // Application services (orchestration / use cases)
         services.AddScoped<IPersonService, PersonService>();
         services.AddScoped<ILocationService, LocationService>();
+
+        // Infrastructure services (external concerns)
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IAuthService, AuthService>();
+
+        // Background worker that drains the transactional outbox.
+        services.AddHostedService<OutboxProcessor>();
 
         return services;
     }

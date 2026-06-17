@@ -1,11 +1,10 @@
 using AutoMapper;
 using Moq;
 using PeopleDirectory.Application.DTOs;
-using PeopleDirectory.Application.Interfaces;
 using PeopleDirectory.Application.Mapping;
+using PeopleDirectory.Application.Services;
 using PeopleDirectory.Domain.Entities;
 using PeopleDirectory.Domain.Interfaces;
-using PeopleDirectory.Infrastructure.Services;
 
 namespace PeopleDirectory.UnitTests.Services;
 
@@ -13,7 +12,7 @@ public class PersonServiceTests
 {
     private readonly Mock<IPersonRepository> _personRepoMock;
     private readonly Mock<IAuditLogRepository> _auditRepoMock;
-    private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Mock<IOutboxRepository> _outboxRepoMock;
     private readonly IMapper _mapper;
     private readonly PersonService _sut;
 
@@ -21,34 +20,31 @@ public class PersonServiceTests
     {
         _personRepoMock = new Mock<IPersonRepository>();
         _auditRepoMock = new Mock<IAuditLogRepository>();
-        _emailServiceMock = new Mock<IEmailService>();
+        _outboxRepoMock = new Mock<IOutboxRepository>();
+        _outboxRepoMock.Setup(r => r.AddAsync(It.IsAny<OutboxMessage>())).Returns(Task.CompletedTask);
 
         var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
         _mapper = config.CreateMapper();
 
-        _sut = new PersonService(_personRepoMock.Object, _auditRepoMock.Object, _emailServiceMock.Object, _mapper);
+        _sut = new PersonService(_personRepoMock.Object, _auditRepoMock.Object, _outboxRepoMock.Object, _mapper);
     }
 
-    private static Person CreateSamplePerson(int id = 1) => new()
+    private static Person CreateSamplePerson(int id = 1, string firstName = "John", string lastName = "Doe")
     {
-        Id = id,
-        FirstName = "John",
-        LastName = "Doe",
-        Email = "john@example.com",
-        MobileNumber = "+1234567890",
-        Gender = "Male",
-        CityId = 1,
-        AddressLine = "123 Main St",
-        DateOfBirth = new DateOnly(1990, 1, 15),
-        IsActive = true,
-        City = new City
+        var person = Person.Create(
+            firstName, lastName, "john@example.com", "+1234567890", "Male",
+            cityId: 1, addressLine: "123 Main St", dateOfBirth: new DateOnly(1990, 1, 15),
+            profilePictureUrl: null);
+        person.Id = id;
+        person.City = new City
         {
             Id = 1,
             Name = "Cape Town",
             CountryId = 1,
             Country = new Country { Id = 1, Name = "South Africa", Code = "ZA" }
-        }
-    };
+        };
+        return person;
+    }
 
     // ── SearchAsync ──
 
@@ -132,9 +128,7 @@ public class PersonServiceTests
             CityId = 1,
             Gender = "Female"
         };
-        var createdPerson = CreateSamplePerson(5);
-        createdPerson.FirstName = "Jane";
-        createdPerson.LastName = "Smith";
+        var createdPerson = CreateSamplePerson(5, "Jane", "Smith");
 
         _personRepoMock.Setup(r => r.AddAsync(It.IsAny<Person>())).Returns(Task.CompletedTask);
         _personRepoMock.Setup(r => r.SaveChangesAsync()).ReturnsAsync(1);
@@ -149,6 +143,8 @@ public class PersonServiceTests
         _personRepoMock.Verify(r => r.AddAsync(It.IsAny<Person>()), Times.Once);
         _personRepoMock.Verify(r => r.SaveChangesAsync(), Times.Once);
         _auditRepoMock.Verify(r => r.AddAsync(It.Is<AuditLog>(a => a.Action == "Created")), Times.Once);
+        // A change-notification is durably staged in the outbox instead of fire-and-forget.
+        _outboxRepoMock.Verify(r => r.AddAsync(It.IsAny<OutboxMessage>()), Times.Once);
     }
 
     [Fact]
@@ -221,7 +217,7 @@ public class PersonServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_NoChanges_DoesNotSendEmail()
+    public async Task UpdateAsync_NoChanges_DoesNotEnqueueNotification()
     {
         var existing = CreateSamplePerson();
         var dto = new PersonUpdateDto
@@ -243,11 +239,8 @@ public class PersonServiceTests
 
         await _sut.UpdateAsync(1, dto, null, "admin");
 
-        // Give fire-and-forget a moment, then verify no email was sent
-        await Task.Delay(100);
-        _emailServiceMock.Verify(e => e.SendChangeNotificationAsync(
-            It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<Dictionary<string, (string?, string?)>>()), Times.Never);
+        // No fields changed, so nothing should be staged in the outbox.
+        _outboxRepoMock.Verify(r => r.AddAsync(It.IsAny<OutboxMessage>()), Times.Never);
     }
 
     // ── DeleteAsync ──

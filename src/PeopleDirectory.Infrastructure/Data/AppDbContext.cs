@@ -13,6 +13,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Country> Countries => Set<Country>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -51,6 +52,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
             e.Property(a => a.Action).HasMaxLength(20);
             e.Property(a => a.PerformedBy).HasMaxLength(100);
             e.HasOne(a => a.Person).WithMany().HasForeignKey(a => a.PersonId);
+        });
+
+        builder.Entity<OutboxMessage>(e =>
+        {
+            e.HasKey(m => m.Id);
+            e.Property(m => m.Type).HasMaxLength(100).IsRequired();
+            e.Property(m => m.Payload).IsRequired();
+            e.Property(m => m.LastError).HasMaxLength(2000);
+            // Speeds up the background processor's "pending messages" query.
+            e.HasIndex(m => new { m.ProcessedAt, m.CreatedAt });
         });
 
         SeedData.Seed(builder);

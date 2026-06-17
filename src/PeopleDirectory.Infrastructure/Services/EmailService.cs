@@ -70,7 +70,9 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
+            // Log and rethrow so the outbox processor records the failure and retries.
             _logger.LogError(ex, "Failed to send email notification for {Action} on {PersonName}", action, personName);
+            throw;
         }
     }
 }

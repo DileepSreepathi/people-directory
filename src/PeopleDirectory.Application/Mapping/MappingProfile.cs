@@ -22,9 +22,6 @@ public class MappingProfile : Profile
             .ForMember(d => d.CityName, opt => opt.MapFrom(s => s.City.Name))
             .ForMember(d => d.CountryName, opt => opt.MapFrom(s => s.City.Country.Name));
 
-        CreateMap<PersonCreateDto, Person>();
-        CreateMap<PersonUpdateDto, Person>();
-
         CreateMap<Country, CountryDto>();
         CreateMap<City, CityDto>();
     }

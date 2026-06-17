@@ -2,9 +2,9 @@ using AutoMapper;
 using Moq;
 using PeopleDirectory.Application.DTOs;
 using PeopleDirectory.Application.Mapping;
+using PeopleDirectory.Application.Services;
 using PeopleDirectory.Domain.Entities;
 using PeopleDirectory.Domain.Interfaces;
-using PeopleDirectory.Infrastructure.Services;
 
 namespace PeopleDirectory.UnitTests.Services;
 

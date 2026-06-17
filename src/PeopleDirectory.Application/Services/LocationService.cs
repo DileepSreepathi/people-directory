@@ -3,7 +3,7 @@ using PeopleDirectory.Application.DTOs;
 using PeopleDirectory.Application.Interfaces;
 using PeopleDirectory.Domain.Interfaces;
 
-namespace PeopleDirectory.Infrastructure.Services;
+namespace PeopleDirectory.Application.Services;
 
 public class LocationService : ILocationService
 {
